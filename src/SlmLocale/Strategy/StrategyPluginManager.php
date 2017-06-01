@@ -41,40 +41,68 @@
 namespace SlmLocale\Strategy;
 
 use Zend\ServiceManager\AbstractPluginManager;
+use Zend\ServiceManager\Factory\InvokableFactory;
 
 class StrategyPluginManager extends AbstractPluginManager
 {
+    protected $instanceOf = StrategyInterface::class;
+
     /**
-     * {@inheritDocs}
+     * {@inheritdoc}
      */
-    protected $invokableClasses = array(
-        'cookie'         => 'SlmLocale\Strategy\CookieStrategy',
-        'host'           => 'SlmLocale\Strategy\HostStrategy',
-        'acceptlanguage' => 'SlmLocale\Strategy\HttpAcceptLanguageStrategy',
-        'query'          => 'SlmLocale\Strategy\QueryStrategy',
-        'uripath'        => 'SlmLocale\Strategy\UriPathStrategy',
-    );
+    protected $aliases = [
+        'cookie'         => CookieStrategy::class,
+        'host'           => HostStrategy::class,
+        'acceptlanguage' => HttpAcceptLanguageStrategy::class,
+        'query'          => QueryStrategy::class,
+        'uripath'        => UriPathStrategy::class,
+    ];
+
+    /**
+     * {@inheritdoc}
+     */
+    protected $factories = [
+        CookieStrategy::class                         => InvokableFactory::class,
+        HostStrategy::class                           => InvokableFactory::class,
+        HttpAcceptLanguageStrategy::class             => InvokableFactory::class,
+        QueryStrategy::class                          => InvokableFactory::class,
+        UriPathStrategy::class                        => InvokableFactory::class,
+        'slmlocalestrategycookiestrategy'             => InvokableFactory::class,
+        'slmlocalestrategyhoststrategy'               => InvokableFactory::class,
+        'slmlocalestrategyhttpacceptlanguagestrategy' => InvokableFactory::class,
+        'slmlocalestrategyquerystrategy'              => InvokableFactory::class,
+        'slmlocalestrategyuripathstrategy'            => InvokableFactory::class,
+    ];
 
     /**
      * Validate the plugin
      *
      * Checks that the helper loaded is an instance of StrategyInterface.
      *
-     * @param  mixed                            $plugin
+     * @param  mixed $instance
      * @return void
      * @throws Exception\InvalidStrategyException if invalid
      */
-    public function validatePlugin($plugin)
+    public function validate($instance)
     {
-        if ($plugin instanceof StrategyInterface) {
+        if ($instance instanceof $this->instanceOf) {
             // we're okay
             return;
         }
 
+        // fixme: should throw Zend\ServiceManager\Exception\InvalidServiceException but we can't because of BC
         throw new Exception\InvalidStrategyException(sprintf(
             'Plugin of type %s is invalid; must implement %s\StrategyInterface',
-            (is_object($plugin) ? get_class($plugin) : gettype($plugin)),
+            (is_object($instance) ? get_class($instance) : gettype($instance)),
             __NAMESPACE__
         ));
+    }
+
+    /**
+     * @deprecated to support ServiceManager v2
+     */
+    public function validatePlugin($instance)
+    {
+        $this->validate($instance);
     }
 }

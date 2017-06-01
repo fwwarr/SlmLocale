@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (c) 2013 Jurian Sluiman.
+ * Copyright (c) 2012-2013 Jurian Sluiman.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,13 +33,53 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @author      Jurian Sluiman <jurian@juriansluiman.nl>
- * @copyright   2013 Jurian Sluiman.
+ * @copyright   2012-2013 Jurian Sluiman.
  * @license     http://www.opensource.org/licenses/bsd-license.php  BSD License
  * @link        http://juriansluiman.nl
  */
 
-namespace SlmLocale\Exception;
+namespace SlmLocale\Strategy\Factory;
 
-interface ExceptionInterface
+use Interop\Container\ContainerInterface;
+use Interop\Container\Exception\ContainerException;
+use SlmLocale\Strategy\UriPathStrategy;
+use Zend\ServiceManager\Exception\ServiceNotCreatedException;
+use Zend\ServiceManager\Exception\ServiceNotFoundException;
+use Zend\ServiceManager\FactoryInterface;
+use Zend\ServiceManager\ServiceLocatorInterface;
+
+class UriPathStrategyFactory implements FactoryInterface
 {
+    /**
+     * Create an object
+     *
+     * @param  ContainerInterface $container
+     * @param  string $requestedName
+     * @param  null|array $options
+     *
+     * @return object
+     * @throws ServiceNotFoundException if unable to resolve the service.
+     * @throws ServiceNotCreatedException if an exception is raised when
+     *     creating a service.
+     * @throws ContainerException if any other error occurs
+     */
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
+    {
+        $strategy = new UriPathStrategy($container->get('router'));
+        $strategy->setServiceLocator($container);
+
+        return $strategy;
+    }
+
+    /**
+     * Create service
+     *
+     * @param ServiceLocatorInterface $serviceLocator
+     *
+     * @return mixed
+     */
+    public function createService(ServiceLocatorInterface $serviceLocator)
+    {
+        return $this($serviceLocator, UriPathStrategy::class);
+    }
 }

@@ -1,4 +1,14 @@
 <?php
+
+use SlmLocale\Locale\Detector;
+use SlmLocale\Service\DetectorFactory;
+use SlmLocale\Service\LocaleMenuViewHelperFactory;
+use SlmLocale\Service\LocaleUrlViewHelperFactory;
+use SlmLocale\Strategy\Factory\StrategyPluginManagerFactory;
+use SlmLocale\Strategy\StrategyPluginManager;
+use SlmLocale\View\Helper\LocaleMenu;
+use SlmLocale\View\Helper\LocaleUrl;
+
 /**
  * Copyright (c) 2012-2013 Jurian Sluiman.
  * All rights reserved.
@@ -38,28 +48,26 @@
  * @link        http://juriansluiman.nl
  */
 
-return array(
-    'slm_locale' => array(
-        'strategies' => array()
-    ),
+return [
+    'slm_locale' => [
+        'strategies' => [],
+    ],
 
-    'service_manager' => array(
-        'invokables' => array(
-            'SlmLocale\Strategy\StrategyPluginManager' => 'SlmLocale\Strategy\StrategyPluginManager',
-        ),
-        'factories'  => array(
-            'SlmLocale\Locale\Detector' => 'SlmLocale\Service\DetectorFactory',
-        ),
-    ),
+    'service_manager' => [
+        'factories'  => [
+            StrategyPluginManager::class => StrategyPluginManagerFactory::class,
+            Detector::class              => DetectorFactory::class,
+        ],
+    ],
 
-    'view_helpers' => array(
-        'aliases' => array(
-            'localeUrl'  => 'SlmLocale\View\Helper\LocaleUrl',
-            'localeMenu' => 'SlmLocale\View\Helper\LocaleMenu',
-        ),
-        'factories' => array(
-            'SlmLocale\View\Helper\LocaleUrl'  => 'SlmLocale\Service\LocaleUrlViewHelperFactory',
-            'SlmLocale\View\Helper\LocaleMenu' => 'SlmLocale\Service\LocaleMenuViewHelperFactory',
-        ),
-    ),
-);
+    'view_helpers' => [
+        'aliases' => [
+            'localeUrl'  => LocaleUrl::class,
+            'localeMenu' => LocaleMenu::class,
+        ],
+        'factories' => [
+            LocaleUrl::class  => LocaleUrlViewHelperFactory::class,
+            LocaleMenu::class => LocaleMenuViewHelperFactory::class,
+        ],
+    ],
+];

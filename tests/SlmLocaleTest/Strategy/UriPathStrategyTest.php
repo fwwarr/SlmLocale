@@ -41,31 +41,41 @@ namespace SlmLocaleTest\Locale;
 
 use PHPUnit_Framework_TestCase as TestCase;
 use SlmLocale\LocaleEvent;
+use SlmLocale\Strategy\StrategyPluginManager;
 use SlmLocale\Strategy\UriPathStrategy;
-use Zend\Console\Response as ConsoleResponse;
 use Zend\Console\Request as ConsoleRequest;
-use Zend\Http\PhpEnvironment\Response as HttpResponse;
+use Zend\Console\Response as ConsoleResponse;
 use Zend\Http\PhpEnvironment\Request as HttpRequest;
-use Zend\Mvc\Router\Http\TreeRouteStack as HttpRouter;
+use Zend\Http\PhpEnvironment\Response as HttpResponse;
 use Zend\Mvc\Router\Console\SimpleRouteStack as ConsoleRouter;
+use Zend\Mvc\Router\Http\TreeRouteStack as HttpRouter;
 use Zend\ServiceManager\ServiceManager;
 use Zend\Uri\Uri;
 
 class UriPathStrategyTest extends TestCase
 {
+    /** @var UriPathStrategy */
+    private $strategy;
+    /** @var LocaleEvent */
+    private $event;
+    /** @var HttpRouter */
+    private $router;
+
     public function setup()
     {
-        $this->strategy = new UriPathStrategy;
+        $this->router = new HttpRouter();
+
+        $this->strategy = new UriPathStrategy($this->router);
         $this->strategy->setServiceLocator($this->getPluginManager());
 
         $this->event = new LocaleEvent();
-        $this->event->setSupported(array('nl', 'de', 'en'));
+        $this->event->setSupported(['nl', 'de', 'en']);
     }
 
     public function testDetectWithConsoleRequestReturnsNull()
     {
-        $this->event->setRequest(new ConsoleRequest);
-        $this->event->setResponse(new ConsoleResponse);
+        $this->event->setRequest(new ConsoleRequest());
+        $this->event->setResponse(new ConsoleResponse());
 
         $locale = $this->strategy->detect($this->event);
         $this->assertNull($locale);
@@ -73,8 +83,8 @@ class UriPathStrategyTest extends TestCase
 
     public function testDetectReturnsNullByDefault()
     {
-        $this->event->setRequest(new HttpRequest);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setRequest(new HttpRequest());
+        $this->event->setResponse(new HttpResponse());
 
         $locale = $this->strategy->detect($this->event);
         $this->assertNull($locale);
@@ -82,11 +92,11 @@ class UriPathStrategyTest extends TestCase
 
     public function testDetectReturnsFirstPathSegmentAsLocale()
     {
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri('http://example.com/en/deep/path/');
 
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $locale   = $this->strategy->detect($this->event);
         $expected = 'en';
@@ -95,11 +105,11 @@ class UriPathStrategyTest extends TestCase
 
     public function testDetectReturnsNullForUnsupported()
     {
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri('http://example.com/fr/');
 
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $locale = $this->strategy->detect($this->event);
         $this->assertNull($locale);
@@ -107,18 +117,15 @@ class UriPathStrategyTest extends TestCase
 
     public function testDetectWithBaseUrlReturnsRightPartOfPath()
     {
-        $manager = $this->getPluginManager();
-        $router  = $manager->getServiceLocator()->get('router');
-        $router->setBaseUrl('/some/seep/installation/path');
-        $this->strategy->setServiceLocator($manager);
+        $this->router->setBaseUrl('/some/seep/installation/path');
 
         $this->event->setLocale('en');
 
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri('http://example.com/some/deep/installation/path/en/some/deep/path');
 
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $locale   = $this->strategy->detect($this->event);
         $expected = 'en';
@@ -128,12 +135,12 @@ class UriPathStrategyTest extends TestCase
     public function testFoundRedirectsByDefault()
     {
         $uri     = 'http://username:password@example.com:8080/some/deep/path/some.file?withsomeparam=true';
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri($uri);
 
         $this->event->setLocale('en');
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $this->strategy->found($this->event);
 
@@ -146,14 +153,14 @@ class UriPathStrategyTest extends TestCase
 
     public function testFoundShouldRespectDisabledRedirectWhenFound()
     {
-        $this->strategy->setOptions(array('redirect_when_found' => false));
+        $this->strategy->setOptions(['redirect_when_found' => false]);
 
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri('http://example.com/');
 
         $this->event->setLocale('en');
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $this->strategy->found($this->event);
 
@@ -205,42 +212,35 @@ class UriPathStrategyTest extends TestCase
 
     public function testFoundSetsBaseUrl()
     {
-        $manager = $this->getPluginManager();
-        $router  = $manager->getServiceLocator()->get('router');
-        $this->strategy->setServiceLocator($manager);
-
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri('http://example.com/en/');
 
         $this->event->setLocale('en');
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $this->strategy->found($this->event);
 
         $expected = '/en';
-        $actual   = $router->getBaseUrl();
+        $actual   = $this->router->getBaseUrl();
         $this->assertEquals($expected, $actual);
     }
 
     public function testFoundAppendsExistingBaseUrl()
     {
-        $manager = $this->getPluginManager();
-        $router  = $manager->getServiceLocator()->get('router');
-        $router->setBaseUrl('/some/deep/installation/path');
-        $this->strategy->setServiceLocator($manager);
+        $this->router->setBaseUrl('/some/deep/installation/path');
 
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri('http://example.com/some/deep/installation/path/en/');
 
         $this->event->setLocale('en');
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $this->strategy->found($this->event);
 
         $expected = '/some/deep/installation/path/en';
-        $actual   = $router->getBaseUrl();
+        $actual   = $this->router->getBaseUrl();
         $this->assertEquals($expected, $actual);
     }
 
@@ -263,12 +263,12 @@ class UriPathStrategyTest extends TestCase
 
     public function testFoundDoesNotRedirectWhenLocaleIsInPath()
     {
-        $request = new HttpRequest;
+        $request = new HttpRequest();
         $request->setUri('http://example.com/en/');
 
         $this->event->setLocale('en');
         $this->event->setRequest($request);
-        $this->event->setResponse(new HttpResponse);
+        $this->event->setResponse(new HttpResponse());
 
         $this->strategy->found($this->event);
 
@@ -338,9 +338,9 @@ class UriPathStrategyTest extends TestCase
         $this->event->setLocale('en-US');
         $this->event->setUri($uri);
 
-        $this->strategy->setOptions(array(
-            'aliases' => array('nl' => 'nl-NL', 'en' => 'en-US'),
-        ));
+        $this->strategy->setOptions([
+            'aliases' => ['nl' => 'nl-NL', 'en' => 'en-US'],
+        ]);
         $this->strategy->assemble($this->event);
 
         $expected = '/en/foo/bar/baz';
@@ -351,17 +351,11 @@ class UriPathStrategyTest extends TestCase
 
     protected function getPluginManager($console = false)
     {
-        $sl = new ServiceManager;
-        $sl->setService('router', $console ? new ConsoleRouter : new HttpRouter);
+        $sl = new ServiceManager();
+        $sl->setService('router', $console ? new ConsoleRouter() : new HttpRouter());
 
-        $pluginManager = $this->getMock('SlmLocale\Strategy\StrategyPluginManager', array(
-            'getServiceLocator'
-        ));
-        $pluginManager->expects($this->any())
-                      ->method('getServiceLocator')
-                      ->will($this->returnValue($sl));
+        $pluginManager = new StrategyPluginManager($sl);
 
         return $pluginManager;
     }
-
 }

@@ -42,8 +42,10 @@ namespace SlmLocale;
 
 use Locale;
 
-use Zend\ModuleManager\Feature;
+use SlmLocale\Locale\Detector;
 use Zend\EventManager\EventInterface;
+use Zend\Loader\StandardAutoloader;
+use Zend\ModuleManager\Feature;
 use Zend\Mvc\MvcEvent;
 use Zend\Stdlib\ResponseInterface;
 
@@ -54,13 +56,13 @@ class Module implements
 {
     public function getAutoloaderConfig()
     {
-        return array(
-            'Zend\Loader\StandardAutoloader' => array(
-                'namespaces' => array(
+        return [
+            StandardAutoloader::class => [
+                'namespaces' => [
                     __NAMESPACE__ => __DIR__ . '/src/' . __NAMESPACE__,
-                ),
-            ),
-        );
+                ],
+            ],
+        ];
     }
 
     public function getConfig()
@@ -73,7 +75,7 @@ class Module implements
         $app = $e->getApplication();
         $sm  = $app->getServiceManager();
 
-        $detector = $sm->get('SlmLocale\Locale\Detector');
+        $detector = $sm->get(Detector::class);
         $result   = $detector->detect($app->getRequest(), $app->getResponse());
 
         if ($result instanceof ResponseInterface) {
@@ -89,7 +91,7 @@ class Module implements
              * possible.
              */
             $em = $app->getEventManager();
-            $em->attach(MvcEvent::EVENT_ROUTE, function($e) use ($result) {
+            $em->attach(MvcEvent::EVENT_ROUTE, function ($e) use ($result) {
                 return $result;
             }, PHP_INT_MAX);
         }

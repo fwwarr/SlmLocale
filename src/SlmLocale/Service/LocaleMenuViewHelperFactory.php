@@ -40,23 +40,46 @@
 
 namespace SlmLocale\Service;
 
+use Interop\Container\ContainerInterface;
+use Interop\Container\Exception\ContainerException;
+use SlmLocale\Locale\Detector;
 use SlmLocale\View\Helper\LocaleMenu;
+use Zend\ServiceManager\Exception\ServiceNotCreatedException;
+use Zend\ServiceManager\Exception\ServiceNotFoundException;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
 
 class LocaleMenuViewHelperFactory implements FactoryInterface
 {
     /**
+     * Create an object
+     *
+     * @param  ContainerInterface $container
+     * @param  string $requestedName
+     * @param  null|array $options
+     *
+     * @return LocaleMenu
+     * @throws ServiceNotFoundException if unable to resolve the service.
+     * @throws ServiceNotCreatedException if an exception is raised when
+     *     creating a service.
+     * @throws ContainerException if any other error occurs
+     */
+    public function __invoke(ContainerInterface $container, $requestedName, array $options = null)
+    {
+        $detector = $container->get(Detector::class);
+
+        $helper = new LocaleMenu();
+        $helper->setDetector($detector);
+
+        return $helper;
+    }
+
+    /**
      * @param  ServiceLocatorInterface $serviceLocator
      * @return LocaleMenu
      */
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
-        $detector = $serviceLocator->getServiceLocator()->get('SlmLocale\Locale\Detector');
-
-        $helper = new LocaleMenu;
-        $helper->setDetector($detector);
-
-        return $helper;
+        return $this($serviceLocator->getServiceLocator(), LocaleMenu::class);
     }
 }

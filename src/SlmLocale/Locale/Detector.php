@@ -85,10 +85,10 @@ class Detector implements EventManagerAwareInterface
 
     public function setEventManager(EventManagerInterface $events)
     {
-        $events->setIdentifiers(array(
+        $events->setIdentifiers([
             __CLASS__,
-            get_called_class()
-        ));
+            get_called_class(),
+        ]);
         $this->events = $events;
 
         return $this;
@@ -96,7 +96,7 @@ class Detector implements EventManagerAwareInterface
 
     public function addStrategy(StrategyInterface $strategy, $priority = 1)
     {
-        $this->getEventManager()->attachAggregate($strategy, $priority);
+        $strategy->attach($this->getEventManager(), $priority);
     }
 
     public function getDefault()
@@ -107,6 +107,7 @@ class Detector implements EventManagerAwareInterface
     public function setDefault($default)
     {
         $this->default = $default;
+
         return $this;
     }
 
@@ -118,12 +119,13 @@ class Detector implements EventManagerAwareInterface
     public function setSupported(array $supported)
     {
         $this->supported = $supported;
+
         return $this;
     }
 
     public function hasSupported()
     {
-        return (is_array($this->supported) && count($this->supported));
+        return is_array($this->supported) && count($this->supported);
     }
 
     public function getMappings()
@@ -153,9 +155,9 @@ class Detector implements EventManagerAwareInterface
         }
 
         $events  = $this->getEventManager();
-        $results = $events->trigger($event, function($r) {
+        $results = $events->triggerEventUntil(function ($r) {
             return is_string($r);
-        });
+        }, $event);
 
         if ($results->stopped()) {
             $locale = $results->last();
@@ -163,7 +165,7 @@ class Detector implements EventManagerAwareInterface
             $locale = $this->getDefault();
         }
 
-        if ($this->hasSupported() && !in_array($locale, $this->getSupported())) {
+        if ($this->hasSupported() && ! in_array($locale, $this->getSupported())) {
             $locale = $this->getDefault();
         }
 
@@ -185,11 +187,11 @@ class Detector implements EventManagerAwareInterface
              * a Location header) and as such, the response must be returned
              * instead of the locale.
              */
-            $events->trigger($event, function ($r) use (&$return) {
+            $events->triggerEventUntil(function ($r) use (&$return) {
                 if ($r instanceof ResponseInterface) {
                     $return = true;
                 }
-            });
+            }, $event);
 
             if ($return) {
                 return $response;
@@ -209,14 +211,14 @@ class Detector implements EventManagerAwareInterface
             $event->setSupported($this->getSupported());
         }
 
-        if (!$uri instanceof Uri) {
+        if (! $uri instanceof Uri) {
             $uri = new Uri($uri);
         }
         $event->setUri($uri);
 
         $events  = $this->getEventManager();
         $results = $events->trigger($event);
-        if (!$results->stopped()) {
+        if (! $results->stopped()) {
             return $uri;
         }
 

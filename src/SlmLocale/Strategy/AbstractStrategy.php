@@ -41,19 +41,13 @@
 namespace SlmLocale\Strategy;
 
 use SlmLocale\LocaleEvent;
+use Zend\EventManager\AbstractListenerAggregate;
 use Zend\EventManager\EventManagerInterface;
 use Zend\Http\Request as HttpRequest;
 use Zend\Stdlib\RequestInterface;
 
-abstract class AbstractStrategy implements StrategyInterface
+abstract class AbstractStrategy extends AbstractListenerAggregate implements StrategyInterface
 {
-    /**
-     * Listeners we've registered
-     *
-     * @var array
-     */
-    protected $listeners = array();
-
     /**
      * Attach "detect", "found" and "assemble" listeners
      *
@@ -62,23 +56,9 @@ abstract class AbstractStrategy implements StrategyInterface
      */
     public function attach(EventManagerInterface $events, $priority = 1)
     {
-        $this->listeners[] = $events->attach(LocaleEvent::EVENT_DETECT,    array($this, 'detect'), $priority);
-        $this->listeners[] = $events->attach(LocaleEvent::EVENT_FOUND,     array($this, 'found'),  $priority);
-        $this->listeners[] = $events->attach(LocaleEvent::EVENT_ASSEMBLE,  array($this, 'assemble'),  $priority);
-    }
-
-    /**
-     * Detach all previously attached listeners
-     *
-     * @param EventManagerInterface $events
-     */
-    public function detach(EventManagerInterface $events)
-    {
-        foreach ($this->listeners as $index => $listener) {
-            if ($events->detach($listener)) {
-                unset($this->listeners[$index]);
-            }
-        }
+        $this->listeners[] = $events->attach(LocaleEvent::EVENT_DETECT, [$this, 'detect'], $priority);
+        $this->listeners[] = $events->attach(LocaleEvent::EVENT_FOUND, [$this, 'found'], $priority);
+        $this->listeners[] = $events->attach(LocaleEvent::EVENT_ASSEMBLE, [$this, 'assemble'], $priority);
     }
 
     public function detect(LocaleEvent $event)
